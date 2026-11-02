@@ -252,7 +252,7 @@ async function detection(browser, url) {
   const expect = {
     'deck.html': [/· 3$/, 3], 'report.html': [/web page/i, 3], 'carousel.html': [/web page/i, 0],
     'crlf.html': [/web page/i, 0], 'struct.html': [/web page/i, 0], 'mutating.html': [/web page/i, 0],
-    'rewrite.html': [/web page/i, 0],
+    'rewrite.html': [/web page/i, 0], 'canvas.html': [/· 960×540$/, 0],
   };
   for (const [f, [badge, thumbs]] of Object.entries(expect)) {
     const s = await new Session(browser, url).start();
@@ -260,6 +260,10 @@ async function detection(browser, url) {
     if (f === 'deck.html') check('editor loads CSS + ES modules (200, right MIME)', ['/__htmldeck/css/editor.css', '/__htmldeck/js/app.mjs', '/__htmldeck/js/i18n.mjs'].every(a => s.assets.has(a)), [...s.assets].join(', '));
     const got = await s.page.evaluate(() => [document.querySelector('#mode-badge').textContent, document.querySelectorAll('#filmstrip .thumb').length]);
     check(`${f}: badge "${got[0]}", ${got[1]} thumb`, badge.test(got[0]) && got[1] === thumbs, `want ${badge} / ${thumbs}`);
+    if (f === 'canvas.html') {
+      const frame = await s.page.evaluate(() => { const f = document.querySelector('#frame'); return [f.offsetWidth, f.offsetHeight, document.querySelector('#sb-width').hidden]; });
+      check('canvas.html: edited at its declared 960×540 canvas, no page-width presets', frame[0] === 960 && frame[1] === 540 && frame[2] === true, JSON.stringify(frame));
+    }
     const c = await s.content();
     check(`${f}: no-op roundtrip byte-identical, not dirty`, c === disk(f) && !(await s.dirty()), firstDiff(c, disk(f)));
     await s.close();

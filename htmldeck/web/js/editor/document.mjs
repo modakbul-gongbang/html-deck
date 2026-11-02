@@ -95,7 +95,7 @@ export function resetState() {
   if (S.crop) { S.crop.cancelDrag?.(); S.crop = null; el.ctx.classList.remove('crop-mode'); el.box.classList.remove('crop'); }
   clearTimeout(S.notesTimer); S.notesTimer = 0; S.saving = false;
   clearTimeout(S.draftTimer);
-  S.liveById = new Map(); S.slideDrag = null; S.slides = []; S.sections = []; S.cur = 0; S.doc = null; S.win = null;
+  S.liveById = new Map(); S.slideDrag = null; S.slides = []; S.sections = []; S.cur = 0; S.doc = null; S.win = null; S.canvas = null;
   S.layerScope = null; S.linkCtx = null; S.spacingDrag = false;
   S.noteRegion = null; S.hoverRegion = null; S.marquee = null;
   clearMulti();
@@ -252,6 +252,7 @@ export function onFrameReady() {
     toast('Document has no .slide blocks — keeping web page mode', { ms: 4000 });
   }
   if (S.mode === 'page') slides.length = 0;
+  S.canvas = S.mode === 'page' && S.format?.format !== 'reveal' ? detectCanvas(doc) : null;
   for (const s of slides) {
     const d = win.getComputedStyle(s).display;
     s.dataset.edDisplay = d && d !== 'none' ? d : 'block';
@@ -316,6 +317,18 @@ export function detectSlides(doc, win) {
   if (isSectionReport(best, win)) { S.sections = best.filter(s => win.getComputedStyle(s).display !== 'none'); return []; }
   const wide = best.filter(s => { const w = parseFloat(win.getComputedStyle(s).width); return !(w > 0) || w >= 900; });
   return best.length >= 2 && wide.length === best.length ? best : [];
+}
+// A page drawn on one fixed canvas (a single slide per file): the document declares its print
+// size with `@page { size: W H }` and its body renders at exactly that size. It is edited at that
+// size, fitted to the screen, instead of at a page-viewport width.
+const CSS_PX = { px: 1, pt: 96 / 72, in: 96, cm: 96 / 2.54, mm: 96 / 25.4 };
+export function detectCanvas(doc) {
+  const css = [...doc.querySelectorAll('style')].map(n => n.textContent).join('\n');
+  const m = css.match(/@page\s*\{[^}]*?\bsize\s*:\s*([\d.]+)(px|pt|in|cm|mm)\s+([\d.]+)(px|pt|in|cm|mm)/i);
+  if (!m) return null;
+  const w = Math.round(+m[1] * CSS_PX[m[2].toLowerCase()]), h = Math.round(+m[3] * CSS_PX[m[4].toLowerCase()]);
+  const r = doc.body.getBoundingClientRect();
+  return Math.abs(r.width - w) <= 1 && Math.abs(r.height - h) <= 1 ? { w, h } : null;
 }
 // Reveal deck in the edit preview: its runtime was intercepted by the bootstrap (see
 // formats/reveal.mjs), so the DOM is the authored one. Returns the leaf slides.

@@ -20,7 +20,7 @@ export function applyModeUI() {
   const deck = S.mode === 'deck';
   el.filmstrip.hidden = !deck && !S.sections.length;
   $('#sb-notes').hidden = !deck;
-  $('#sb-width').hidden = deck;
+  $('#sb-width').hidden = deck || !!S.canvas;
   $('#page-count').hidden = !deck;
   $('#sb-prev').hidden = !deck;
   $('#sb-next').hidden = !deck;
@@ -52,7 +52,7 @@ export function updateChrome() {
     dn.title = S.source.kind === 'server' ? S.source.path : S.source.kind === 'handle' ? (S.source.name + ' (' + t('local_file') + ')') : (S.source.name + ' (' + t('download_only') + ')');
     const badge = $('#mode-badge');
     badge.hidden = false;
-    badge.textContent = S.mode === 'deck' ? `${t('sb_deck')} · ${S.slides.length}` : t('sb_page');
+    badge.textContent = S.mode === 'deck' ? `${t('sb_deck')} · ${S.slides.length}` : S.canvas ? `${t('sb_canvas')} · ${S.canvas.w}×${S.canvas.h}` : t('sb_page');
     document.title = (dirty ? '• ' : '') + S.source.name + ' — HtmlDeck';
   }
   if (dirty && !S.saving) scheduleDraft();
